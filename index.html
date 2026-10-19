@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -5,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MiniTube</title>
 <style>
+* { box-sizing: border-box; }
 body {
   margin: 0;
   background: #0f0f0f;
@@ -20,7 +22,6 @@ header {
 main { padding: 16px; }
 input {
   width: 100%;
-  box-sizing: border-box;
   padding: 14px;
   border-radius: 24px;
   border: 1px solid #555;
@@ -40,36 +41,105 @@ button {
 .note {
   color: #bbb;
   line-height: 1.7;
+  font-size: 14px;
+}
+.player {
+  margin-top: 24px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #222;
+  border-radius: 12px;
+  overflow: hidden;
+}
+iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
 }
 </style>
 </head>
 <body>
 <header>▶ MiniTube</header>
 <main>
-  <h2>動画を探そう</h2>
-  <form id="search">
-    <input id="q" placeholder="見たい動画を入力..." required>
-    <button type="submit">YouTubeで検索</button>
-  </form>
+  <h2>動画を見よう</h2>
   <p class="note">
-    検索するとYouTube公式サイトが開きます。
+    YouTubeの動画URLか動画IDを入力してね。
+  </p>
+
+  <form id="videoForm">
+    <input id="videoInput"
+      placeholder="YouTubeのURLまたは動画ID"
+      required>
+    <button type="submit">動画を再生</button>
+  </form>
+
+  <div class="player" id="player" hidden>
+    <iframe id="videoFrame"
+      title="MiniTube動画プレイヤー"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <p class="note" id="message">
+    ここで動画を再生できるよ！
   </p>
 </main>
-<script>
-document.getElementById("search").addEventListener("submit", function(e) {
-  e.preventDefault();
-  const q = document.getElementById("q").value.trim();
-  if (!q) return;
 
-  const url = "https://www.youtube.com/results?search_query=" + encodeURIComponent(q);
-  const link = document.createElement("a");
-  link.href = url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+<script>
+const form = document.getElementById("videoForm");
+const input = document.getElementById("videoInput");
+const player = document.getElementById("player");
+const frame = document.getElementById("videoFrame");
+const message = document.getElementById("message");
+
+form.addEventListener("submit", function(e) {
+  e.preventDefault();
+
+  const value = input.value.trim();
+  let id = "";
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(value)) {
+    id = value;
+  } else {
+    try {
+      const url = new URL(value);
+
+      if (url.hostname === "youtu.be") {
+        id = url.pathname.slice(1).split("/")[0];
+      } else if (
+        url.hostname === "youtube.com" ||
+        url.hostname === "www.youtube.com" ||
+        url.hostname === "m.youtube.com"
+      ) {
+        if (url.pathname === "/watch") {
+          id = url.searchParams.get("v") || "";
+        } else {
+          const parts = url.pathname.split("/");
+          if (["embed", "shorts"].includes(parts[1])) {
+            id = parts[2] || "";
+          }
+        }
+      }
+    } catch (error) {}
+  }
+
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+    message.textContent =
+      "有効なYouTube動画URLか動画IDを入力してね。";
+    return;
+  }
+
+  frame.src =
+    "https://www.youtube-nocookie.com/embed/" +
+    id;
+  player.hidden = false;
+  message.textContent =
+    "再生できない動画は、埋め込みが制限されている可能性があるよ。";
 });
+</script>
 </body>
 </html>
+
 
